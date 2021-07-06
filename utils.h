@@ -1,10 +1,13 @@
 #pragma once
+#pragma warning(push, 0)
 #include "curl/curl.h"
+#pragma warning(pop)
 #include <fstream>
 #include <TlHelp32.h>
 #include <Psapi.h>
 #include <filesystem>
 #include <vector>
+#include <iostream>
 namespace fs = std::filesystem;
 
 #ifdef WIN32
@@ -86,18 +89,36 @@ static int extractZipPowerShell(const fs::path& filepath, const fs::path& output
 	std::ofstream File(tempScriptLoc.string().c_str());
 	File << SCRIPT << "extractzip \"" << filepath.string() << "\" \"" << output.string() << "\"";
 	File.close();
-	std::string startline = "powershell -executionPolicy bypass -file ";
+	std::string startline = "start powershell -executionPolicy bypass -file ";
 	std::string fullLine = startline + "\"" + tempScriptLoc.string() + "\"";
 	int returned = system(fullLine.c_str());
 	return returned;
 }
 #endif
 
+bool hasTar() {
+	return !system("start tar --help");
+}
+
 static int extractZipTar(const fs::path& filepath, const fs::path& output) {
 	std::string startline = "tar -xf \"";
 	std::string fullLine = startline + filepath.string() + "\" -C \"" + output.string() + "\"";
 	int returned = system(fullLine.c_str());
 	return returned;
+}
+
+static int extractZip(const fs::path& filepath, const fs::path& output) {
+	int res;
+	if (hasTar()) {
+		res = extractZipTar(filepath, output);
+	} else {
+#ifdef WIN32
+		res = extractZipPowerShell(filepath, output);
+#else
+		res = 1
+#endif
+	}
+	return res;
 }
 
 static int removeAllInDir(const fs::path& folder) {
@@ -154,4 +175,16 @@ bool isCsgoDir(fs::path* targetPath) {
 		if (!fs::exists(posPath)) { return false; }
 	}
 	return true;
+}
+
+CURLcode downloadFile(CURL* curl, std::string url, fs::path savepath) {
+	FILE* fp;
+	fopen_s(&fp, savepath.string().c_str(), "wb");
+	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _writeData);
+	CURLcode res = curl_easy_perform(curl);
+	curl_easy_cleanup(curl);
+	if (fp) fclose(fp);
+	return res;
 }

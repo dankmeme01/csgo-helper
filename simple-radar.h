@@ -1,4 +1,6 @@
 #pragma once
+// simple-radar.h - Header file for csgo-helper.cpp
+// Needed for installing Simple Radar into CS:GO
 
 #include "utils.h"
 #include <vector>
@@ -21,20 +23,6 @@ std::string getSimpleRadarLink(bool dark, bool callouts, bool buyzones, bool ele
 
 	std::string URL = link + opts + ending;
 	return URL;
-}
-
-
-
-CURLcode downloadSimpleRadar(CURL* curl, std::string url, fs::path savepath) {
-	FILE* fp;
-	fopen_s(&fp, savepath.string().c_str(), "wb");
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _writeData);
-	CURLcode res = curl_easy_perform(curl);
-	curl_easy_cleanup(curl);
-	if (fp) fclose(fp);
-	return res;
 }
 
 void _srCleanup() {
@@ -71,24 +59,11 @@ static int installSR0() {
 static CURLcode installSR1(CURL* curl, bool preferences[4]) {
 	std::string url = getSimpleRadarLink(preferences[0], preferences[1], preferences[2], preferences[3]);
 	fs::path fullpath = fs::temp_directory_path() / "SimpleRadar.zip";
-	CURLcode result = downloadSimpleRadar(curl, url, fullpath);
+	CURLcode result = downloadFile(curl, url, fullpath);
 	return result;
 }
 
-static int installSR2(fs::path zipPath, fs::path targetFolder) {
-	int res = extractZipTar(zipPath, targetFolder);
-	if (res) {
-#ifdef WIN32
-		res = extractZipPowerShell(zipPath, targetFolder);
-#else
-		res = 1;
-#endif
-	}
-	if (res) { return res; }
-	return res;
-}
-
-static int installSR3(fs::path targetFolder, fs::path csgoPath) {
+static int installSR2(fs::path targetFolder, fs::path csgoPath) {
 	try {
 		int res = copyAllFrom((targetFolder / "Simple Radar" / "01 default"), csgoPath / "csgo" / "resource" / "overviews");
 		if (res) return res;
@@ -120,7 +95,7 @@ static int installSimpleRadar(CURL* curl, fs::path csgoRootPath, bool preference
 	}
 
 	std::cout << "Extracting files from .zip file to your temp folder..";
-	int res3 = installSR2(fs::temp_directory_path() / "SimpleRadar.zip", fs::temp_directory_path() / "Temp-SimpleRadar");
+	int res3 = extractZip(fs::temp_directory_path() / "SimpleRadar.zip", fs::temp_directory_path() / "Temp-SimpleRadar");
 	if (!res3) std::cout << "OK" << std::endl << "Extracted contents of SimpleRadar.zip, beginning to transfer to CS:GO folder..";
 	else {
 		std::cout << "NOT OK" << std::endl;
@@ -129,7 +104,7 @@ static int installSimpleRadar(CURL* curl, fs::path csgoRootPath, bool preference
 		return res3;
 	}
 
-	int res4 = installSR3(fs::temp_directory_path() / "Temp-SimpleRadar", csgoRootPath);
+	int res4 = installSR2(fs::temp_directory_path() / "Temp-SimpleRadar", csgoRootPath);
 	if (res4) {
 		std::cout << "NOT OK" << std::endl;
 		std::cerr << "There was an error in copying files, aborting. Please run this file as administrator!" << std::endl;

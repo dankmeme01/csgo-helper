@@ -3,7 +3,7 @@
 // Needed for installing a python telnet client for CS:GO
 
 #include "utils.h"
-std::string URL = "https://google.com"; // todo
+std::string URL = "https://github.com/dankmeme01/csgo-telnet/archive/refs/heads/master.zip";
 
 void _tcCleanup() {
 	std::vector<fs::path> paths = {
@@ -72,6 +72,6 @@ static int installTelnetClient(CURL* curl, fs::path whereInstall) {
 		return res2;
 	}
 
-	std::cout << std::endl << "Finished installing telnet client for CS:GO. For further help open the instructions.txt in the folder where you installed it." << std::endl;
+	std::cout << std::endl << "Finished installing telnet client for CS:GO.\nFor further help open the README.md in the folder where you installed it." << std::endl;
 	return 0;
 }

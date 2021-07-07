@@ -21,10 +21,10 @@ struct Commands {
 		for (std::vector<std::string>::iterator it = commands.begin(); it != commands.end(); ++it)
 			std::cout << *it << std::endl;
 	}
-	static void dumpConfig(fs::path csgoPath) { std::cout << "Not implemented."; } // TODO note: ignore file moddefaults.txt
-	static void loadConfig(fs::path csgoPath) { std::cout << "Not implemented."; } // TODO
-	static void knifeCfg(fs::path csgoPath) { std::cout << "Not implemented."; } // TODO
-	static void gamemodesCfg(fs::path csgoPath) { std::cout << "Not implemented."; } // TODO
+	static void dumpConfig(fs::path csgoPath) { std::cout << "Not implemented." << std::endl; } // TODO note: ignore file moddefaults.txt
+	static void loadConfig(fs::path csgoPath) { std::cout << "Not implemented." << std::endl; } // TODO
+	static void knifeCfg(fs::path csgoPath) { std::cout << "Not implemented." << std::endl; } // TODO
+	static void gamemodesCfg(fs::path csgoPath) { std::cout << "Not implemented." << std::endl; } // TODO
 	static int telnetInstall(CURL* curl, fs::path installLoc) { return installTelnetClient(curl, installLoc / "csgo-telnet"); }
 };
 

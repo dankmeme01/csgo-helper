@@ -29,5 +29,8 @@
     <ClInclude Include="pytelnet-client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="filedata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

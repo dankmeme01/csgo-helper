@@ -44,8 +44,8 @@ static int installTelnetClient(CURL* curl, fs::path whereInstall) {
 		"This package is used for sending commands from python script to your in-game console." << std::endl << \
 		"It can be used in basic way (creating a simple script for it) and binding a key to executing it," << std::endl << \
 		"Or in a more advanced way, by creating custom .py scripts (only with python knowledge)." << std::endl << \
-		"Advanced instructions on how to do both will be bundled with the package in the folder where you install it" << std::endl << std::endl;
-	std::cout << "Write 'yes' if you agree to install this program, or anything else if you want to go back to csgo-utils: ";
+		"Advanced instructions on how to do both will be bundled with the package in the folder where you install it" << std::endl << std::endl \
+	<<  "Write 'yes' if you agree to install this program, or anything else if you want to go back to csgo-utils: ";
 	std::string _a;
 	getline(std::cin, _a);
 	if (_a != "yes") { std::cout << "Aborting." << std::endl; _tcCleanup(); return 0; }
@@ -72,6 +72,6 @@ static int installTelnetClient(CURL* curl, fs::path whereInstall) {
 		return res2;
 	}
 
-	std::cout << std::endl << "Finished installing telnet client for CS:GO.\nFor further help open the README.md in the folder where you installed it." << std::endl;
+	std::cout << std::endl << "Finished installing telnet client for CS:GO.\nFor further help open the repository of csgo-telnet at " << URL << std::endl;
 	return 0;
 }

@@ -159,6 +159,7 @@
     <ClCompile Include="csgo-helper.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="filedata.h" />
     <ClInclude Include="pytelnet-client.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="simple-radar.h" />

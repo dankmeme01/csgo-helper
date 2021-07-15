@@ -9,3 +9,5 @@ No need for installing anything, just grab the latest .exe file and run it. Then
 ## Credits
 
 Special thanks to all the dependencies that this program relies on, such as libcurl. And separate thanks for [this project](https://github.com/TinyTinni/ValveFileVDF) for an easy-to-use VDF parser.
+
+Simple Radar is a product of [tl;dr](https://readtldr.gg/simpleradar) that I have no relation to, just providing an easy installer.

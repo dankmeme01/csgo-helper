@@ -3,14 +3,7 @@
 // Needed for installing Simple Radar into CS:GO
 
 #include "utils.h"
-#include <vector>
-#include <iostream>
-#include <ostream>
-#include <array>
-#ifdef WIN32
-#include <direct.h>
-#endif
-#include <regex>
+
 namespace fs = std::filesystem;
 
 std::string getSimpleRadarLink(bool dark, bool callouts, bool buyzones, bool elevations) {
@@ -65,9 +58,9 @@ static CURLcode installSR1(CURL* curl, bool preferences[4]) {
 
 static int installSR2(fs::path targetFolder, fs::path csgoPath) {
 	try {
-		int res = copyAllFrom((targetFolder / "Simple Radar" / "01 default"), csgoPath / "csgo" / "resource" / "overviews");
+		int res = copyAllFrom((targetFolder / "Simple Radar" / "01 default"), csgoPath / "csgo" / "resource" / "overviews", true);
 		if (res) return res;
-		res = copyAllFrom((targetFolder / "Simple Radar" / "02 spectate"), csgoPath / "csgo" / "resource" / "overviews");
+		res = copyAllFrom((targetFolder / "Simple Radar" / "02 spectate"), csgoPath / "csgo" / "resource" / "overviews", true);
 		if (res) return res;
 		return 0;
 	}
@@ -121,7 +114,7 @@ static int installSimpleRadar(CURL* curl, fs::path csgoRootPath, bool preference
 	return 0;
 }
 
-std::array<bool,4> getUserPreferences() {
+std::vector<bool> getUserPreferences() {
 	std::string opt1, opt2, opt3, opt4;
 	std::cout << "Dark or light mode? (enter d or l): ";
 	getline(std::cin, opt1);
@@ -142,6 +135,6 @@ std::array<bool,4> getUserPreferences() {
 	op2 = parseOpt(opt2.at(0), 'w', 'n', false);
 	op3 = parseOpt(opt3.at(0), 'w', 'n', true);
 	op4 = parseOpt(opt4.at(0), 'w', 'n', true);
-	std::array<bool, 4> arr = { op1,op2,op3,op4 };
+	std::vector<bool> arr = { op1,op2,op3,op4 };
 	return arr;
 }

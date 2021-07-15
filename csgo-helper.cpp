@@ -11,19 +11,100 @@ struct Commands {
 		std::vector<std::string> commands = {
 			"radar - Install Simple Radar in your CS:GO directory",
 			"help - Show the menu that you are currently looking at",
-			"dumpconfig - Dump your entire cfg folder and your personal config into a .zip file",
-			"loadconfig - Load cfg folder and personal config from a .zip file",
-			"knifecfg - Download configs for getting knives (only offline w/ bots, or if\n           server has sv_cheats set to 1. Skins are impossible to get, only vanilla)",
-			"gmcfg - Download configs for interesting gamemodes (bhop, surf, hns, etc..).\n        All scripts must be run by server host, otherwise would not work!",
-			"telnet - Install a telnet client written on python"
+			"dumpconfig - Dump your entire cfg folder and your personal config into a .tar archive",
+			"loadconfig - Load cfg folder and personal config from a .tar archive",
+			"knifecfg - Install (offline) configs for getting knives (only offline w/ bots, or if\n           server has sv_cheats set to 1. Skins are impossible to get, only vanilla)",
+			"gmcfg - Install (offline) configs for interesting gamemodes (bhop, surf, hns, etc..).\n        All scripts must be run by server host, otherwise would not work!",
+			"telnet - Download and install a telnet client written on python"
 		};
 		std::cout << "List of possible commands: " << std::endl;
 		std::sort(commands.begin(), commands.end(), compareFunction);
 		for (std::vector<std::string>::iterator it = commands.begin(); it != commands.end(); ++it)
 			std::cout << *it << std::endl;
 	}
-	static void dumpConfig(fs::path csgoPath, fs::path _where) { std::cout << "Not implemented." << std::endl; } // TODO note: ignore file moddefaults.txt
-	static void loadConfig(fs::path csgoPath, fs::path _from) { std::cout << "Not implemented." << std::endl; } // TODO
+	static int dumpConfig(fs::path csgoPath, fs::path udPath, fs::path _where) {
+		int res;
+		fs::path path1 = csgoPath / "csgo" / "cfg";
+		res = makeZip(path1, _where/"csgo-configs.tar", false);
+		if (res) return res;
+		std::cout << "Several accounts were found on your computer.\nPlease select which one to use for dumping config:" << std::endl << std::endl;
+		auto players = getUsersLogged(udPath);
+		int ind = 1;
+		std::map<int, fs::path> map;
+		for (const auto& [k, v] : players) {
+			int current = ind++;
+			std::cout << current << ". " << v << std::endl;
+			map.insert(std::pair<int, fs::path>(current, k));
+		}
+		std::cout << ">";
+		std::string b;
+		getline(std::cin, b);
+		if (map.size() > std::stoul(b.c_str()) || std::stoul(b.c_str()) < 1) {
+			do {
+				std::cout << "Invalid index." << std::endl << ">";
+				getline(std::cin, b);
+			} while (map.size() > std::stoul(b.c_str()) || std::stoul(b.c_str()) < 1);
+		}
+		fs::path pathToDump = map.at(std::stoul(b.c_str()));
+		res = makeZip(pathToDump, _where / "csgo-configs.tar", true);
+		return res;
+	}
+	static int loadConfig(fs::path csgoPath, fs::path udPath, fs::path _from, std::vector<std::string> *arguments) {
+		bool force = \
+			(std::find(arguments->begin(), arguments->end(), "-f") != arguments->end() || std::find(arguments->begin(), arguments->end(), "--force") != arguments->end());
+		int res;
+		fs::path tempTarget = fs::temp_directory_path() / "temp-csgohelper";
+		if (fs::exists(tempTarget)) {
+			try {
+				fs::remove_all(tempTarget);
+				res = _mkdir(tempTarget.string().c_str());
+				if (res) { return 1; }
+			}
+			catch (std::exception e) {
+				std::cerr << e.what() << std::endl;
+				res = removeAllInDir(tempTarget);
+				if (res) { return 1; }
+			}
+		}
+		else {
+			res = _mkdir(tempTarget.string().c_str());
+			if (res) { return 1; }
+		}
+
+		res = extractZip(_from, tempTarget);
+		if (res) return 3;
+		if (!fs::exists(tempTarget / "local") || !fs::exists(tempTarget / "cfg")) { return 4; }
+
+		try {
+			fs::copy(tempTarget / "cfg", csgoPath / "csgo" / "cfg", fs::copy_options::recursive | (force ? fs::copy_options::overwrite_existing : fs::copy_options::skip_existing));
+		} catch (fs::filesystem_error& e) { std::cerr << e.code() << e.what() << std::endl; return 2; }
+
+		std::cout << "Several accounts were found on your computer.\nPlease select which one to use for writing config:" << std::endl << std::endl;
+		auto players = getUsersLogged(udPath);
+		int ind = 1;
+		std::map<int, fs::path> map;
+		for (const auto& [k, v] : players) {
+			int current = ind++;
+			std::cout << current << ". " << v << std::endl;
+			map.insert(std::pair<int, fs::path>(current, k));
+		}
+		std::cout << ">";
+		std::string b;
+		getline(std::cin, b);
+		if (map.size() > std::stoul(b.c_str()) || std::stoul(b.c_str()) < 1) {
+			do {
+				std::cout << "Invalid index." << std::endl << ">";
+				getline(std::cin, b);
+			} while (map.size() > std::stoul(b.c_str()) || std::stoul(b.c_str()) < 1);
+		}
+		fs::path pathToDump = map.at(std::stoul(b.c_str()));
+		
+		try {
+			fs::copy(tempTarget / "local", pathToDump, fs::copy_options::recursive | (force ? fs::copy_options::overwrite_existing : fs::copy_options::skip_existing));
+		} catch (fs::filesystem_error& e) { std::cerr << e.code() << ": " << e.what() << std::endl; return 2; }
+
+		return 0;
+	}
 	static void knifeCfg(fs::path csgoPath, std::vector<std::string>* arguments) {
 		if (std::find(arguments->begin(), arguments->end(), "-f") != arguments->end() || std::find(arguments->begin(), arguments->end(), "--force") != arguments->end()) {
 			std::cout << "Creating a knives folder in your csgo/cfg folder..";
@@ -133,7 +214,10 @@ struct Commands {
 int main(int argc, const char* argv[]) {
 	CURL* curl = curl_easy_init();
 	fs::path csgoPath;
+	fs::path udPath;
 	if (argc > 1) csgoPath = argv[1];
+	if (argc > 2) udPath = argv[2];
+	udPath /= "userdata";
 	if (!isCsgoDir(&csgoPath)) {
 		try {
 			csgoPath = getGamePath();
@@ -150,6 +234,25 @@ int main(int argc, const char* argv[]) {
 					getline(std::cin, _a);
 					csgoPath = _a;
 				} while (!isCsgoDir(&csgoPath));
+			}
+		}
+	}
+	if (!isUDDir(&udPath)) {
+		try {
+			udPath = getUserDataPath();
+		}
+		catch (std::exception e) {
+			if (argc <= 2) std::cout << "Steam path was not found. Please specify: ";
+			else std::cout << "Specified as an argument path is invalid. Please enter your Steam path: ";
+			std::string _a;
+			getline(std::cin, _a);
+			csgoPath = _a;
+			if (!isUDDir(&udPath)) {
+				do {
+					std::cout << "Invalid path. Please specify path to Steam root folder: ";
+					getline(std::cin, _a);
+					csgoPath = _a;
+				} while (!isUDDir(&udPath));
 			}
 		}
 	}
@@ -177,7 +280,7 @@ int main(int argc, const char* argv[]) {
 				"https://readtldr.gg/simpleradar" << std::endl << std::endl;
 			std::cout << "Type 'yes' to proceed and get asked about how you want your radar to look, or type anything else to cancel the installation: ";
 			std::string inp_;
-			std::cin >> inp_;
+			getline(std::cin, inp_);
 			if (inp_ != "yes") {
 				std::cout << "Aborting." << std::endl;
 				continue;
@@ -194,20 +297,30 @@ int main(int argc, const char* argv[]) {
 			if (!fs::exists(_b) || !fs::is_directory(_b)) {
 				do {
 					std::cout << "Non-existent path. Please enter a valid folder: ";
-				} while (!fs::exists(_b));
+					getline(std::cin, _b);
+				} while (!fs::exists(_b) || !fs::is_directory(_b));
 			}
-			Commands::dumpConfig(csgoPath, _b);
+			int res = Commands::dumpConfig(csgoPath, udPath, _b);
+			if (res) std::cout << "Error in making an archive. You can see the error above, if it says \"Permission denied\" please try closing the game." << std::endl;
+			else std::cout << "Successfully dumped your cfg folder and personal config into a csgo-configs.tar file.\nTo restore use \"loadconfig\" command, or figure out yourself how to do it." << std::endl;
 		}
 		else if (cmd == "loadconfig") {
-			std::cout << std::endl << "Enter path to your dumped csgo-config.tar: ";
+			std::cout << std::endl << "Enter path to your dumped csgo-configs.tar: ";
 			std::string _b;
 			getline(std::cin, _b);
-			if (!fs::exists(_b) || fs::path(_b).filename() != "csgo-config.tar") {
+			if (!fs::exists(_b) || fs::path(_b).filename() != "csgo-configs.tar") {
 				do {
 					std::cout << "Incorrect path. Please enter a valid path to your csgo-config.tar (filename matters!): ";
-				} while (!fs::exists(_b));
+					getline(std::cin, _b);
+				} while (!fs::exists(_b) || fs::path(_b).filename() != "csgo-configs.tar");
 			}
-			Commands::loadConfig(csgoPath, _b);
+			int res = Commands::loadConfig(csgoPath, udPath, _b, &args);
+			if (res == 3) std::cout << "There was an error in extracting files from the archive. Please check if your archive is corrupted!" << std::endl;
+			else if (res == 2) std::cout << "There was an error in moving files. Try running as administrator or closing CS:GO or any file editors/explorers." << std::endl;
+			else if (res == 1) std::cout << "There was an error in creating/deleting a folder. Please go to " << fs::temp_directory_path() << " and check if there is a folder named 'temp-csgohelper'. If there is one, delete it manually." << std::endl;
+			else if (res == 4) std::cout << "Error: Invalid csgo-configs.tar. Archive should contain two folders: local and cfg" << std::endl;
+			else if (res == 0) std::cout << "Successfully loaded your config from the archive." << std::endl << "Warning: if you did not use the --force option, the program did not overwrite any existing files!" << std::endl;
+			else std::cout << "There was an unknown error in loading your config. This should never happen, and error code is " << res << std::endl;
 		}
 		else if (cmd == "gmcfg") Commands::gamemodesCfg(csgoPath, &args);
 		else if (cmd == "knifecfg") Commands::knifeCfg(csgoPath, &args);

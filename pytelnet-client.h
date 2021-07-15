@@ -25,6 +25,8 @@ void _tcCleanup() {
 }
 
 static int installTelnetClient(CURL* curl, fs::path whereInstall) {
+	std::cout << "The code for this part is entirely done, but the Telnet Client project is still a heavy WIP :|" << std::endl;
+	return 1;
 	if (!fs::exists(whereInstall)) {
 		try {
 			int res = _mkdir(whereInstall.string().c_str());
